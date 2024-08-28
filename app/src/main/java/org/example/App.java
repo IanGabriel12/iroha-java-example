@@ -6,21 +6,17 @@ package org.example;
 import jp.co.soramitsu.iroha2.client.Iroha2AsyncClient;
 import jp.co.soramitsu.iroha2.generated.DomainId;
 import jp.co.soramitsu.iroha2.generated.AccountId;
-import jp.co.soramitsu.iroha2.generated.Domain;
 import jp.co.soramitsu.iroha2.generated.Name;
 import jp.co.soramitsu.iroha2.generated.SignedTransaction;
+import jp.co.soramitsu.iroha2.generated.TriggerId;
+import jp.co.soramitsu.iroha2.generated.Value;
 import jp.co.soramitsu.iroha2.model.IrohaUrls;
-import jp.co.soramitsu.iroha2.query.QueryAndExtractor;
-import jp.co.soramitsu.iroha2.query.QueryBuilder;
 import jp.co.soramitsu.iroha2.transaction.TransactionBuilder;
 import jp.co.soramitsu.iroha2.CryptoUtils;
-
 import java.net.URL;
 import java.security.KeyPair;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public class App {
     public static void main(String[] args) throws Exception {
@@ -39,28 +35,23 @@ public class App {
         urls.add(new IrohaUrls(peerUrl, telemetryUrl, peerUrl));
         Iroha2AsyncClient client = new Iroha2AsyncClient(urls);
         
-        Long millisLong = Calendar.getInstance().getTimeInMillis();
-        String domainName = "hello-world" + millisLong;
-        DomainId newDomainId = new DomainId(new Name(domainName));
+        TriggerId triggerId = new TriggerId(null, new Name("add_log"));
 
-        SignedTransaction transaction = TransactionBuilder.Companion
+        SignedTransaction changeTriggerParameters = TransactionBuilder
+            .Companion
             .builder()
             .account(admin)
-            .registerDomain(newDomainId)
-            .buildSigned(pair);
-
-        client.sendTransactionAsync(transaction).get();
-
-        QueryAndExtractor<Domain> query = QueryBuilder
-            .findDomainById(newDomainId)
-            .account(admin)
+            .setKeyValue(triggerId, new Name("NAME"), new Value.String("teste"))
             .buildSigned(pair);
         
-        CompletableFuture<Domain> future = client.sendQueryAsync(query);
-        Domain domain = future.get();
-
-        System.out.println(domain.getId().getName().getString());
-
+        client.sendTransactionAsync(changeTriggerParameters).get();
+        SignedTransaction callTriggerTransaction = TransactionBuilder
+            .Companion
+            .builder()
+            .account(admin)
+            .executeTrigger(triggerId)
+            .buildSigned(pair);
+        client.sendTransactionAsync(callTriggerTransaction).get();
         client.close();
     }
 }

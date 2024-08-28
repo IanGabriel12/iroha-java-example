@@ -5,15 +5,19 @@
  * For more details on building Java & JVM projects, please refer to https://docs.gradle.org/8.8/userguide/building_java_projects.html in the Gradle documentation.
  * This project uses @Incubating APIs which are subject to change.
  */
+import de.qualersoft.jmeter.gradleplugin.task.*
 
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     application
     `java-library`
+    id("com.gradleup.shadow") version "8.3.0"
+    id("de.qualersoft.jmeter") version "2.4.0"
 }
 
 repositories {
     // Use Maven Central for resolving dependencies.
+    mavenLocal()
     mavenCentral()
     maven(url = "https://jitpack.io")
 }
@@ -56,4 +60,20 @@ java {
 application {
     // Define the main class for the application.
     mainClass = "org.example.App"
+}
+
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "org.example.App"
+    }
+}
+
+tasks {
+  register<JMeterRunTask>("runJMeter") { // (4)
+    jmxFile.set("Test.jmx") // (5)
+  }
+
+  register<JMeterGuiTask>("edit") {
+    jmxFile.set("Test.jmx")
+  }
 }
